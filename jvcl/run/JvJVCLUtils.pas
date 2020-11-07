@@ -3803,9 +3803,16 @@ begin
       AppStorage.WriteInteger(AppStorage.ConcatPaths([StorePath, siPixels]), Screen.PixelsPerInch);
       WritePosStr(AppStorage, AppStorage.ConcatPaths([StorePath, siMinMaxPos]), Format('%d,%d,%d,%d',
         [Placement.ptMinPosition.X, Placement.ptMinPosition.Y, Placement.ptMaxPosition.X, Placement.ptMaxPosition.Y]));
+
+{$IFDEF DELPHI27_UP}
+      WritePosStr(AppStorage, AppStorage.ConcatPaths([StorePath, siNormPos]), Format('%d,%d,%d,%d,%d',
+        [Placement.rcNormalPosition.Left, Placement.rcNormalPosition.Top, Placement.rcNormalPosition.Right,
+         Placement.rcNormalPosition.Bottom, Form.CurrentPPI]));
+{$ELSE}
       WritePosStr(AppStorage, AppStorage.ConcatPaths([StorePath, siNormPos]), Format('%d,%d,%d,%d',
         [Placement.rcNormalPosition.Left, Placement.rcNormalPosition.Top, Placement.rcNormalPosition.Right,
          Placement.rcNormalPosition.Bottom]));
+{$ENDIF DELPHI27_UP}
     end;
   finally
     AppStorage.EndUpdate;
@@ -3822,6 +3829,7 @@ var
   WinState: TWindowState;
   DataFound: Boolean;
   OriginalShowCmd: UINT;
+  lScale: Real;
 
   procedure ChangePosition(APosition: TPosition);
   begin
@@ -3889,12 +3897,18 @@ begin
         end;
         if fpSize in Options then
         begin
+{$IFDEF DELPHI27_UP}
+          lScale := Form.CurrentPPI / StrToIntDef(ExtractWord(5, PosStr, Delims), Form.CurrentPPI);
+{$ELSE}
+          lScale := 1;
+{$ENDIF DELPHI27_UP}
+
           Placement.rcNormalPosition.Right := Placement.rcNormalPosition.Left +
-              StrToIntDef(ExtractWord(3, PosStr, Delims), Form.Width)-
-              StrToIntDef(ExtractWord(1, PosStr, Delims), Form.Left);
+              Round(StrToIntDef(ExtractWord(3, PosStr, Delims), Form.Width) * lScale)-
+              Round(StrToIntDef(ExtractWord(1, PosStr, Delims), Form.Left) * lScale);
           Placement.rcNormalPosition.Bottom := Placement.rcNormalPosition.Top +
-              StrToIntDef(ExtractWord(4, PosStr, Delims), Form.Height)-
-              StrToIntDef(ExtractWord(2, PosStr, Delims), Form.Top);
+              Round(StrToIntDef(ExtractWord(4, PosStr, Delims), Form.Height) * lScale)-
+              Round(StrToIntDef(ExtractWord(2, PosStr, Delims), Form.Top) * lScale);
         end
         else
           if fpLocation in Options then
